@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123d32">
+<meta name="description" content="ANAYAT ARTS offline shop billing and inventory app">
+<link rel="manifest" href="manifest.webmanifest">
+<title>ANAYAT ARTS Billing</title>
+<style>
+:root{--green:#123d32;--green2:#1d5b49;--gold:#c9a44c;--cream:#f7f4eb;--ink:#1d2924;--muted:#68766f;--red:#b33c35;--line:#e4e8e2}
+*{box-sizing:border-box}body{margin:0;background:#f2f5f1;color:var(--ink);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:linear-gradient(120deg,var(--green),var(--green2));color:white;padding:18px max(16px,calc((100vw - 1100px)/2));border-bottom:4px solid var(--gold)}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:46px;height:46px;border:2px solid var(--gold);border-radius:12px;display:grid;place-items:center;color:#f2d78e;font-weight:900;font-size:20px}.brand h1{font-size:20px;margin:0;letter-spacing:1.2px}.brand p{margin:3px 0 0;color:#e6eadf;font-size:12px}
+main{max-width:1100px;margin:auto;padding:16px}.tabs{display:flex;gap:8px;overflow:auto;padding:4px 0 14px}.tab{border:1px solid var(--line);background:white;border-radius:10px;padding:10px 13px;white-space:nowrap;font-weight:650;color:var(--green)}.tab.active{background:var(--green);color:white;border-color:var(--green)}
+.panel{display:none}.panel.active{display:block}.card{background:white;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 3px 12px #173b2810}.card h2{margin:0 0 12px;font-size:18px;color:var(--green)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}label{font-size:12px;font-weight:700;color:#52635a}input,select,textarea{width:100%;padding:11px 12px;border:1px solid #cfd8d1;border-radius:9px;font:inherit;background:#fff;color:var(--ink);min-width:0}input:focus,select:focus{outline:2px solid #c9a44c88;border-color:var(--gold)}
+button{border:0;border-radius:9px;padding:11px 14px;font:inherit;font-weight:700;cursor:pointer;background:var(--green);color:white}button.gold{background:var(--gold);color:#2b281d}button.light{background:#edf3ee;color:var(--green);border:1px solid #d5e2d8}button.danger{background:#fff0ef;color:var(--red);border:1px solid #f1cfcc}button:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{background:#f5f8f4;border:1px solid var(--line);border-radius:11px;padding:12px}.stat small{display:block;color:var(--muted)}.stat strong{font-size:20px;color:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:11px;text-transform:uppercase}td.num,th.num{text-align:right}.tablewrap{overflow:auto}
+.muted{color:var(--muted);font-size:12px}.pill{display:inline-block;border-radius:30px;padding:3px 8px;background:#eef4ef;color:var(--green);font-size:11px;font-weight:700}.warn{color:#9a5d00;background:#fff5df}.empty{padding:20px;text-align:center;color:var(--muted)}
+#cameraBox{display:none;margin-top:10px}video{width:100%;max-height:260px;background:#111;border-radius:10px;object-fit:cover}
+.totalrow{display:flex;justify-content:space-between;gap:10px;margin:7px 0}.grand{font-size:21px;font-weight:900;color:var(--green)}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#172d24;color:white;padding:12px 16px;border-radius:10px;box-shadow:0 5px 20px #0003;display:none;z-index:5;max-width:90vw}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
+@media(min-width:760px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.field.full{grid-column:1/-1}.layout{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.layout .card{height:max-content}}
+@media(max-width:520px){main{padding:11px}.stats{grid-template-columns:repeat(2,1fr)}.brand h1{font-size:18px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="logo">AA</div><div><h1>ANAYAT ARTS</h1><p>SHOP BILLING & INVENTORY • PKR</p></div></div></header>
+<main>
+<nav class="tabs" aria-label="Main sections">
+<button class="tab active" data-tab="billing">New Bill</button><button class="tab" data-tab="products">Products & Stock</button><button class="tab" data-tab="sales">Sales History</button><button class="tab" data-tab="reports">Reports & Backup</button><button class="tab" data-tab="settings">Settings</button>
+</nav>
+
+<section id="billing" class="panel active">
+<div class="layout">
+<div class="card">
+<h2>Create a bill</h2>
+<div class="grid">
+<div class="field"><label>Customer name</label><input id="customer" placeholder="Walk-in customer"></div>
+<div class="field"><label>Phone (optional)</label><input id="phone" inputmode="tel" placeholder="03xx xxxxxxx"></div>
+<div class="field"><label>Invoice number</label><input id="invoiceNo" readonly></div>
+<div class="field full"><label>Scan barcode / enter product code</label><div style="display:flex;gap:7px"><input id="scanInput" placeholder="Scan with camera or scanner" autocomplete="off"><button id="addCode">Add</button></div><div class="actions"><button class="light" id="startCamera">Use phone camera</button><button class="light" id="stopCamera" style="display:none">Stop camera</button></div><div id="cameraBox"><video id="video" playsinline></video><p class="muted">Hold the barcode steady inside the camera view.</p></div></div>
+<div class="field"><label>Discount (PKR)</label><input id="discount" type="number" min="0" value="0"></div>
+<div class="field"><label>Amount received (PKR)</label><input id="received" type="number" min="0" value="0"></div>
+</div>
+<div class="tablewrap" style="margin-top:14px"><table><thead><tr><th>Product</th><th class="num">Price</th><th class="num">Qty</th><th class="num">Total</th><th></th></tr></thead><tbody id="cartRows"><tr><td colspan="5" class="empty">Scan or add a product to begin.</td></tr></tbody></table></div>
+</div>
+<div class="card">
+<h2>Bill summary</h2>
+<div class="totalrow"><span>Subtotal</span><strong id="subtotal">PKR 0</strong></div>
+<div class="totalrow"><span>Discount</span><strong id="discountView">PKR 0</strong></div>
+<div class="totalrow grand"><span>Total</span><strong id="grandTotal">PKR 0</strong></div>
+<div class="totalrow"><span>Balance due</span><strong id="balance">PKR 0</strong></div>
+<div class="field" style="margin-top:12px"><label>Payment method</label><select id="paymentMethod"><option>Cash</option><option>Bank transfer</option><option>JazzCash</option><option>EasyPaisa</option><option>Card</option><option>Other</option></select></div>
+<div class="actions"><button class="gold" id="saveBill" style="flex:1">Save bill</button><button class="light" id="clearCart">Clear</button></div>
+<p class="muted">Saving a bill deducts the sold quantities from stock. A sale cannot exceed available stock.</p>
+</div></div>
+</section>
+
+<section id="products" class="panel">
+<div class="card"><h2>Add / update product</h2><div class="grid">
+<div class="field"><label>Product name *</label><input id="pName" placeholder="e.g. Lawn suit"></div>
+<div class="field"><label>Category</label><input id="pCategory" placeholder="Lawn / Khaddar / Silk"></div>
+<div class="field"><label>Barcode / SKU *</label><input id="pBarcode" placeholder="Scan or type barcode"></div>
+<div class="field"><label>Selling price (PKR) *</label><input id="pPrice" type="number" min="0"></div>
+<div class="field"><label>Cost price (PKR)</label><input id="pCost" type="number" min="0" value="0"></div>
+<div class="field"><label>Opening stock</label><input id="pStock" type="number" min="0" value="0"></div>
+</div><div class="actions"><button id="saveProduct">Save product</button><button class="light" id="resetProduct">Clear form</button></div><p class="muted">Tip: use the product's actual barcode number. Each barcode must be unique.</p></div>
+<div class="card"><h2>Inventory <span class="pill" id="productCount">0 products</span></h2><div class="field"><label>Search products</label><input id="productSearch" placeholder="Search name, category or barcode"></div><div class="tablewrap"><table><thead><tr><th>Product</th><th>Barcode</th><th class="num">Price</th><th class="num">Stock</th><th></th></tr></thead><tbody id="productRows"></tbody></table></div></div>
+<div class="card"><h2>Stock in / adjustment</h2><div class="grid"><div class="field"><label>Product</label><select id="stockProduct"></select></div><div class="field"><label>Quantity to add</label><input id="stockQty" type="number" min="1" value="1"></div><div class="field"><label>Reason</label><select id="stockReason"><option>New purchase</option><option>Customer return</option><option>Stock correction</option></select></div></div><div class="actions"><button id="addStock">Add stock</button></div></div>
+</section>
+
+<section id="sales" class="panel"><div class="card"><h2>Sales history</h2><div class="field"><label>Search invoice / customer</label><input id="salesSearch" placeholder="Search"></div><div class="tablewrap"><table><thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th class="num">Total</th><th>Payment</th><th></th></tr></thead><tbody id="salesRows"></tbody></table></div></div></section>
+<section id="reports" class="panel">
+<div class="card"><h2>Shop overview</h2><div class="stats"><div class="stat"><small>Total sales</small><strong id="rSales">PKR 0</strong></div><div class="stat"><small>Estimated profit</small><strong id="rProfit">PKR 0</strong></div><div class="stat"><small>Outstanding</small><strong id="rDue">PKR 0</strong></div><div class="stat"><small>Items in stock</small><strong id="rStock">0</strong></div><div class="stat"><small>Low-stock products</small><strong id="rLow">0</strong></div><div class="stat"><small>Invoices</small><strong id="rInvoices">0</strong></div></div><div id="lowList" class="muted" style="margin-top:12px"></div></div>
+<div class="card"><h2>Backup & export</h2><p class="muted">Backups include products, bills, stock movements and settings. Keep a copy somewhere safe.</p><div class="actions"><button id="backup">Download backup</button><button class="light" id="csv">Export sales CSV</button><label class="light" style="padding:11px 14px;border-radius:9px;cursor:pointer;font-weight:700">Restore backup<input id="restore" type="file" accept="application/json,.json" hidden></label></div></div>
+</section>
+<section id="settings" class="panel"><div class="card"><h2>Shop settings</h2><div class="grid"><div class="field"><label>Shop name</label><input id="shopName" value="ANAYAT ARTS"></div><div class="field"><label>Address</label><input id="shopAddress" placeholder="Shop address"></div><div class="field"><label>Phone</label><input id="shopPhone" placeholder="Shop phone"></div><div class="field"><label>Low-stock warning level</label><input id="lowLevel" type="number" min="0" value="5"></div></div><div class="actions"><button id="saveSettings">Save settings</button></div></div>
+<div class="card"><h2>About offline data</h2><p class="muted">Your records are stored in this browser on this device. They do not automatically sync between phone and PC. Export a backup regularly and restore it on another device. Clearing browser storage can erase records.</p><p class="muted">Install this PWA from your HTTPS website. After the first successful load, its app shell can open offline.</p></div></section>
+</main><footer>ANAYAT ARTS • Billing & Inventory • Local offline storage</footer><div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id), money=n=>'PKR '+Number(n||0).toLocaleString('en-PK',{maximumFractionDigits:2});
+const KEY='anayatArtsPWA_v1';
+let db={products:[],sales:[],movements:[],settings:{shopName:'ANAYAT ARTS',address:'',phone:'',lowLevel:5}};
+try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved)db={...db,...saved,settings:{...db.settings,...saved.settings}}}catch(e){}
+let cart=[],editingId=null,stream=null,detector=null,scanBusy=false;
+function persist(){localStorage.setItem(KEY,JSON.stringify(db));renderAll()}
+function toast(s){$('toast').textContent=s;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2600)}
+function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function nextInvoice(){return 'AA-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+String(db.sales.length+1).padStart(3,'0')}
+function tab(name){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===name));if(name==='billing')$('scanInput').focus()}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+function findProduct(code){let c=String(code||'').trim().toLowerCase();return db.products.find(p=>p.barcode.toLowerCase()===c)}
+function addToCart(p){if(!p)return;let row=cart.find(x=>x.productId===p.id);let qty=row?row.qty+1:1;if(qty>p.stock){toast('Not enough stock. Available: '+p.stock);return}if(row)row.qty++;else cart.push({productId:p.id,name:p.name,price:p.price,cost:p.cost,qty:1});renderCart();toast(p.name+' added')}
+function addCode(){let v=$('scanInput').value.trim();if(!v)return;let p=findProduct(v);if(!p){toast('Barcode not found. Add this product in Products & Stock first.');return}addToCart(p);$('scanInput').value=''}
+$('addCode').onclick=addCode;$('scanInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCode()}});
+function renderCart(){let body=$('cartRows');body.innerHTML='';if(!cart.length)body.innerHTML='<tr><td colspan="5" class="empty">Scan or add a product to begin.</td></tr>';cart.forEach((x,i)=>{let tr=document.createElement('tr');tr.innerHTML=`<td>${esc(x.name)}</td><td class="num">${money(x.price)}</td><td class="num"><button class="light" data-dec="${i}" style="padding:3px 8px">−</button> ${x.qty} <button class="light" data-inc="${i}" style="padding:3px 8px">+</button></td><td class="num">${money(x.price*x.qty)}</td><td><button class="danger" data-del="${i}" style="padding:5px 8px">×</button></td>`;body.appendChild(tr)});
+body.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{let x=cart[+b.dataset.inc],p=db.products.find(p=>p.id===x.productId);if(x.qty<p.stock)x.qty++;else toast('Stock limit reached');renderCart()});
+body.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{let x=cart[+b.dataset.dec];x.qty--;if(x.qty<=0)cart.splice(+b.dataset.dec,1);renderCart()});
+body.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{cart.splice(+b.dataset.del,1);renderCart()});calcBill()}
+function calcBill(){let sub=cart.reduce((s,x)=>s+x.price*x.qty,0),disc=Math.max(0,Number($('discount').value)||0),total=Math.max(0,sub-disc),rec=Math.max(0,Number($('received').value)||0);$('subtotal').textContent=money(sub);$('discountView').textContent=money(disc);$('grandTotal').textContent=money(total);$('balance').textContent=money(Math.max(0,total-rec))}
+$('discount').oninput=calcBill;$('received').oninput=calcBill;$('invoiceNo').value=nextInvoice();
+$('clearCart').onclick=()=>{cart=[];$('discount').value=0;$('received').value=0;renderCart()};
+$('saveBill').onclick=()=>{if(!cart.length){toast('Add products first');return}let sub=cart.reduce((s,x)=>s+x.price*x.qty,0),discount=Math.min(sub,Math.max(0,Number($('discount').value)||0)),total=sub-discount,received=Math.min(total,Math.max(0,Number($('received').value)||0));for(let x of cart){let p=db.products.find(p=>p.id===x.productId);if(!p||p.stock<x.qty){toast('Stock changed. Please review the bill.');return}}
+let sale={id:id(),invoice:$('invoiceNo').value,customer:$('customer').value.trim()||'Walk-in customer',phone:$('phone').value.trim(),date:new Date().toISOString(),items:cart.map(x=>({...x})),subtotal:sub,discount,total,received,balance:total-received,status:received>=total?'Paid':received>0?'Partial':'Unpaid',method:$('paymentMethod').value};
+cart.forEach(x=>{let p=db.products.find(p=>p.id===x.productId);p.stock-=x.qty;db.movements.unshift({date:sale.date,product:p.name,barcode:p.barcode,change:-x.qty,reason:'Sale '+sale.invoice})});db.sales.unshift(sale);cart=[];$('customer').value='';$('phone').value='';$('discount').value=0;$('received').value=0;$('invoiceNo').value=nextInvoice();persist();renderCart();toast('Bill saved: '+sale.invoice);};
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function clearProductForm(){editingId=null;['pName','pCategory','pBarcode','pPrice','pCost'].forEach(k=>$(k).value='');$('pStock').value=0}
+$('resetProduct').onclick=clearProductForm;
+$('saveProduct').onclick=()=>{let name=$('pName').value.trim(),barcode=$('pBarcode').value.trim(),price=Number($('pPrice').value),cost=Number($('pCost').value)||0,stock=Number($('pStock').value)||0;if(!name||!barcode||$('pPrice').value===''||price<0||stock<0){toast('Enter product name, barcode and valid price');return}if(db.products.some(p=>p.barcode.toLowerCase()===barcode.toLowerCase()&&p.id!==editingId)){toast('This barcode is already registered');return}let p=editingId?db.products.find(p=>p.id===editingId):null;if(p){p.name=name;p.category=$('pCategory').value;p.barcode=barcode;p.price=price;p.cost=cost;p.stock=stock}else db.products.push({id:id(),name,category:$('pCategory').value,barcode,price,cost,stock});clearProductForm();persist();toast('Product saved')};
+function renderProducts(){let q=$('productSearch').value.toLowerCase(),rows=db.products.filter(p=>(p.name+' '+p.category+' '+p.barcode).toLowerCase().includes(q));$('productCount').textContent=db.products.length+' products';$('productRows').innerHTML=rows.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="muted">${esc(p.category)}</span></td><td>${esc(p.barcode)}</td><td class="num">${money(p.price)}</td><td class="num"><b>${p.stock}</b>${p.stock<=Number(db.settings.lowLevel)?' <span class="pill warn">Low</span>':''}</td><td><button class="light" data-edit="${p.id}" style="padding:6px 8px">Edit</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">No products yet.</td></tr>';
+$('productRows').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{let p=db.products.find(x=>x.id===b.dataset.edit);editingId=p.id;$('pName').value=p.name;$('pCategory').value=p.category;$('pBarcode').value=p.barcode;$('pPrice').value=p.price;$('pCost').value=p.cost;$('pStock').value=p.stock;window.scrollTo({top:0,behavior:'smooth'})});
+$('stockProduct').innerHTML=db.products.map(p=>`<option value="${p.id}">${esc(p.name)} (${p.stock})</option>`).join('')}
+$('productSearch').oninput=renderProducts;
+$('addStock').onclick=()=>{let p=db.products.find(x=>x.id===$('stockProduct').value),qty=Number($('stockQty').value);if(!p||!Number.isInteger(qty)||qty<=0){toast('Choose product and enter a positive whole quantity');return}p.stock+=qty;db.movements.unshift({date:new Date().toISOString(),product:p.name,barcode:p.barcode,change:qty,reason:$('stockReason').value});persist();toast('Stock updated')};
+function renderSales(){let q=$('salesSearch').value.toLowerCase();$('salesRows').innerHTML=db.sales.filter(s=>(s.invoice+' '+s.customer).toLowerCase().includes(q)).map(s=>`<tr><td><b>${esc(s.invoice)}</b></td><td>${esc(s.customer)}</td><td>${new Date(s.date).toLocaleDateString()}</td><td class="num">${money(s.total)}</td><td><span class="pill">${s.status}</span></td><td><button class="light" data-pay="${s.id}" style="padding:6px 8px">Receive</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">No sales recorded.</td></tr>';$('salesRows').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{let s=db.sales.find(x=>x.id===b.dataset.pay),remaining=s.total-s.received;if(remaining<=0){toast('This invoice is already paid');return}let v=prompt('Remaining: '+money(remaining)+'\\nEnter payment received (PKR):');if(v===null)return;let amount=Number(v);if(!Number.isFinite(amount)||amount<=0){toast('Enter a valid amount');return}s.received=Math.min(s.total,s.received+amount);s.balance=s.total-s.received;s.status=s.balance<=0?'Paid':'Partial';persist();toast('Payment recorded')})}
+$('salesSearch').oninput=renderSales;
+function renderReports(){let sales=db.sales.reduce((a,s)=>a+s.total,0),profit=db.sales.reduce((a,s)=>a+s.items.reduce((z,x)=>z+(x.price-x.cost)*x.qty,0)-s.discount,0),due=db.sales.reduce((a,s)=>a+(s.total-s.received),0),stock=db.products.reduce((a,p)=>a+p.stock,0),low=db.products.filter(p=>p.stock<=Number(db.settings.lowLevel));$('rSales').textContent=money(sales);$('rProfit').textContent=money(profit);$('rDue').textContent=money(due);$('rStock').textContent=stock;$('rLow').textContent=low.length;$('rInvoices').textContent=db.sales.length;$('lowList').innerHTML=low.length?'<b>Low-stock products:</b> '+low.map(p=>esc(p.name)+' ('+p.stock+')').join(', '):'No low-stock products.'}
+function renderAll(){renderProducts();renderSales();renderReports();$('shopName').value=db.settings.shopName;$('shopAddress').value=db.settings.address;$('shopPhone').value=db.settings.phone;$('lowLevel').value=db.settings.lowLevel}
+$('saveSettings').onclick=()=>{db.settings={shopName:$('shopName').value.trim()||'ANAYAT ARTS',address:$('shopAddress').value,phone:$('shopPhone').value,lowLevel:Math.max(0,Number($('lowLevel').value)||0)};persist();toast('Settings saved')};
+$('backup').onclick=()=>download('anayat-arts-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(db,null,2),'application/json');
+$('restore').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d.products)||!Array.isArray(d.sales))throw Error();if(!confirm('Replace current records with this backup?'))return;db={...db,...d,settings:{...db.settings,...d.settings}};persist();toast('Backup restored')}catch(err){toast('Invalid backup file')}e.target.value=''};
+$('csv').onclick=()=>{let rows=[['Invoice','Date','Customer','Phone','Subtotal','Discount','Total','Received','Balance','Status','Method'],...db.sales.map(s=>[s.invoice,s.date,s.customer,s.phone,s.subtotal,s.discount,s.total,s.received,s.total-s.received,s.status,s.method])];let csv=rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n');download('anayat-arts-sales.csv',csv,'text/csv')};
+function download(name,data,type){let a=document.createElement('a'),url=URL.createObjectURL(new Blob([data],{type}));a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
+async function startCamera(){if(!navigator.mediaDevices?.getUserMedia){toast('Camera needs HTTPS and a supported browser');return}if(!('BarcodeDetector'in window)){toast('Barcode detection is not supported in this browser. Use a USB/Bluetooth scanner or enter code.');return}try{let formats=await BarcodeDetector.getSupportedFormats();detector=new BarcodeDetector({formats});stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('video').srcObject=stream;await $('video').play();$('cameraBox').style.display='block';$('startCamera').style.display='none';$('stopCamera').style.display='inline-block';scanLoop()}catch(e){toast('Could not open camera. Check camera permission and HTTPS.')}}
+async function scanLoop(){if(!stream)return;try{let codes=await detector.detect($('video'));if(codes.length&&!scanBusy){scanBusy=true;$('scanInput').value=codes[0].rawValue;addCode();setTimeout(()=>scanBusy=false,1200)}}catch(e){}requestAnimationFrame(scanLoop)}
+function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('video').srcObject=null;$('cameraBox').style.display='none';$('startCamera').style.display='inline-block';$('stopCamera').style.display='none'}
+$('startCamera').onclick=startCamera;$('stopCamera').onclick=stopCamera;
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+renderAll();renderCart();
+</script>
+</body></html>

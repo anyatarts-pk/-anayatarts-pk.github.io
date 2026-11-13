@@ -54,6 +54,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
 <div class="totalrow"><span>Balance due</span><strong id="balance">PKR 0</strong></div>
 <div class="field" style="margin-top:12px"><label>Payment method</label><select id="paymentMethod"><option>Cash</option><option>Bank transfer</option><option>JazzCash</option><option>EasyPaisa</option><option>Card</option><option>Other</option></select></div>
 <div class="actions"><button class="gold" id="saveBill" style="flex:1">Save bill</button><button class="light" id="clearCart">Clear</button></div>
+<div class="field" style="margin-top:12px"><label for="printPaperSize">Receipt / paper size</label><select id="printPaperSize"><option value="58mm">58mm thermal</option><option value="80mm">80mm thermal</option><option value="A4">A4 paper</option></select><p class="muted">Choose the same width as the paper roll loaded in your printer.</p></div>
 <div class="actions"><button class="light" id="printLastBill" style="width:100%">Print last saved bill / Save as PDF</button></div>
 <p class="muted">Saving a bill deducts the sold quantities from stock. A sale cannot exceed available stock.</p>
 </div></div>
@@ -106,7 +107,10 @@ $('clearCart').onclick=()=>{cart=[];$('discount').value=0;$('received').value=0;
 $('saveBill').onclick=()=>{if(!cart.length){toast('Add products first');return}let sub=cart.reduce((s,x)=>s+x.price*x.qty,0),discount=Math.min(sub,Math.max(0,Number($('discount').value)||0)),total=sub-discount,received=Math.min(total,Math.max(0,Number($('received').value)||0));for(let x of cart){let p=db.products.find(p=>p.id===x.productId);if(!p||p.stock<x.qty){toast('Stock changed. Please review the bill.');return}}
 let sale={id:id(),invoice:$('invoiceNo').value,customer:$('customer').value.trim()||'Walk-in customer',phone:$('phone').value.trim(),date:new Date().toISOString(),items:cart.map(x=>({...x})),subtotal:sub,discount,total,received,balance:total-received,status:received>=total?'Paid':received>0?'Partial':'Unpaid',method:$('paymentMethod').value};
 cart.forEach(x=>{let p=db.products.find(p=>p.id===x.productId);p.stock-=x.qty;db.movements.unshift({date:sale.date,product:p.name,barcode:p.barcode,change:-x.qty,reason:'Sale '+sale.invoice})});db.sales.unshift(sale);lastSavedSaleId=sale.id;cart=[];$('customer').value='';$('phone').value='';$('discount').value=0;$('received').value=0;$('invoiceNo').value=nextInvoice();persist();renderCart();toast('Bill saved: '+sale.invoice+' • Use Print last saved bill below.');};
-$('printLastBill').onclick=()=>{let sale=db.sales.find(x=>x.id===lastSavedSaleId);if(!sale){toast('Save a bill first, or print one from Sales History.');return}printSale(sale)};
+const PRINT_SIZE_KEY='anayatArtsPrintPaperSize';
+$('printPaperSize').value=localStorage.getItem(PRINT_SIZE_KEY)||'58mm';
+$('printPaperSize').onchange=()=>localStorage.setItem(PRINT_SIZE_KEY,$('printPaperSize').value);
+$('printLastBill').onclick=()=>{let sale=db.sales.find(x=>x.id===lastSavedSaleId);if(!sale){toast('Save a bill first, or print one from Sales History.');return}printSale(sale,$('printPaperSize').value)};
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function clearProductForm(){editingId=null;['pName','pCategory','pBarcode','pPrice','pCost'].forEach(k=>$(k).value='');$('pStock').value=0}
 $('resetProduct').onclick=clearProductForm;
@@ -116,34 +120,36 @@ $('productRows').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{let p
 $('stockProduct').innerHTML=db.products.map(p=>`<option value="${p.id}">${esc(p.name)} (${p.stock})</option>`).join('')}
 $('productSearch').oninput=renderProducts;
 $('addStock').onclick=()=>{let p=db.products.find(x=>x.id===$('stockProduct').value),qty=Number($('stockQty').value);if(!p||!Number.isInteger(qty)||qty<=0){toast('Choose product and enter a positive whole quantity');return}p.stock+=qty;db.movements.unshift({date:new Date().toISOString(),product:p.name,barcode:p.barcode,change:qty,reason:$('stockReason').value});persist();toast('Stock updated')};
-function printSale(sale){
+function printSale(sale,paperSize){
+ const size=paperSize||$('printPaperSize')?.value||localStorage.getItem('anayatArtsPrintPaperSize')||'58mm';
  const w=window.open('','_blank','width=800,height=900');
  if(!w){toast('Allow pop-ups for this site, then tap Print again.');return}
- const shop=db.settings||{}, rows=(sale.items||[]).map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${Number(x.qty)||0}</td><td class="n">${money(x.price)}</td><td class="n">${money((Number(x.qty)||0)*(Number(x.price)||0))}</td></tr>`).join('');
- const date=new Date(sale.date).toLocaleString();
+ const shop=db.settings||{}, date=new Date(sale.date).toLocaleString();
+ const rows=(sale.items||[]).map((x,i)=>{
+   const qty=Number(x.qty)||0, price=Number(x.price)||0, amount=qty*price;
+   return `<div class="item"><div class="item-name">${esc(x.name)}</div><div class="item-meta"><span>${qty} × ${money(price)}</span><b>${money(amount)}</b></div></div>`;
+ }).join('');
+ const isA4=size==='A4', width=size==='80mm'?'76mm':'54mm', pageWidth=isA4?'auto':(size==='80mm'?'80mm':'58mm');
+ const totals=`<div class="total-row"><span>Subtotal</span><b>${money(sale.subtotal)}</b></div><div class="total-row"><span>Discount</span><b>${money(sale.discount)}</b></div><div class="total-row grand"><span>TOTAL</span><b>${money(sale.total)}</b></div><div class="total-row"><span>Received</span><b>${money(sale.received)}</b></div><div class="total-row"><span>Balance due</span><b>${money(sale.balance)}</b></div>`;
  w.document.open();
- w.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(sale.invoice)} - ANAYAT ARTS</title><style>
- *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#202820;margin:0;padding:24px}.paper{max-width:760px;margin:auto;border:1px solid #d9dfd8;padding:26px}
- header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:3px solid #b99a4b;padding-bottom:15px}
- h1{margin:0;color:#20543d;letter-spacing:2px;font-size:27px}.tag{color:#987a35;font-size:11px;letter-spacing:1.5px;margin-top:5px}
- .meta{text-align:right;font-size:12px;line-height:1.6}.details{display:flex;justify-content:space-between;gap:20px;margin:20px 0;font-size:13px;line-height:1.6}
- table{width:100%;border-collapse:collapse;font-size:13px;margin-top:18px}th{background:#20543d;color:white;text-align:left}th,td{padding:10px 8px;border-bottom:1px solid #dfe5df}.n{text-align:right;white-space:nowrap}
- .totals{width:300px;max-width:100%;margin:18px 0 0 auto}.totals div{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}.grand{border-top:2px solid #b99a4b;font-weight:bold;color:#20543d;font-size:17px!important}
- .thanks{text-align:center;border-top:1px solid #ddd;margin-top:26px;padding-top:15px;color:#20543d;font-weight:bold}.actions{display:flex;gap:8px;justify-content:center;margin:20px auto}.actions button{border:0;border-radius:7px;padding:11px 18px;background:#20543d;color:white;font-weight:bold}
- @media print{body{padding:0}.paper{border:0;padding:0}.actions{display:none}@page{size:A4;margin:12mm}}
- </style></head><body><div class="paper">
- <header><div><h1>${esc(shop.shopName||'ANAYAT ARTS')}</h1><div class="tag">GARMENTS • BILLING & INVENTORY</div><div style="font-size:12px;margin-top:8px">${esc(shop.address||'')}</div><div style="font-size:12px">${esc(shop.phone||'')}</div></div>
- <div class="meta"><b>SALES INVOICE</b><br>Invoice: ${esc(sale.invoice)}<br>Date: ${esc(date)}<br>Status: ${esc(sale.status||'')}</div></header>
- <div class="details"><div><b>Bill To</b><br>${esc(sale.customer||'Walk-in customer')}<br>${esc(sale.phone||'')}</div><div style="text-align:right"><b>Payment method</b><br>${esc(sale.method||'')}</div></div>
- <table><thead><tr><th>#</th><th>Product</th><th class="n">Qty</th><th class="n">Price</th><th class="n">Amount</th></tr></thead><tbody>${rows}</tbody></table>
- <div class="totals"><div><span>Subtotal</span><b>${money(sale.subtotal)}</b></div><div><span>Discount</span><b>${money(sale.discount)}</b></div><div class="grand"><span>Total</span><b>${money(sale.total)}</b></div><div><span>Received</span><b>${money(sale.received)}</b></div><div><span>Balance due</span><b>${money(sale.balance)}</b></div></div>
- <div class="thanks">Thank you for shopping with ANAYAT ARTS!</div></div>
+ w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(sale.invoice)} - ANAYAT ARTS</title><style>
+ *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#202820;margin:0;padding:12px;font-size:12px}.paper{width:${isA4?'100%':width};max-width:${isA4?'760px':width};margin:0 auto}
+ .head{text-align:center;border-bottom:1px dashed #555;padding-bottom:9px}.head h1{margin:0;color:#20543d;letter-spacing:1px;font-size:${isA4?'25px':'19px'}}.tag{font-size:9px;letter-spacing:1px;margin:3px 0 6px}.shop-details{font-size:10px;line-height:1.4;overflow-wrap:anywhere}
+ .invoice-meta{display:flex;justify-content:space-between;gap:8px;margin:9px 0;font-size:10px;line-height:1.5}.customer{border-top:1px dashed #777;border-bottom:1px dashed #777;padding:7px 0;margin:7px 0;font-size:10px;line-height:1.5}
+ .items{margin-top:7px}.item{padding:6px 0;border-bottom:1px dotted #aaa;break-inside:avoid}.item-name{font-weight:bold;overflow-wrap:anywhere}.item-meta{display:flex;justify-content:space-between;gap:5px;margin-top:3px;font-size:10px}.totals{margin-top:8px;border-top:1px dashed #555;padding-top:6px}.total-row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:10px}.grand{border-top:1px solid #333;border-bottom:1px solid #333;margin:4px 0;padding:6px 0;font-size:14px;font-weight:bold}
+ .payment{text-align:center;font-size:10px;margin-top:7px}.thanks{text-align:center;border-top:1px dashed #555;margin-top:10px;padding-top:8px;font-weight:bold;font-size:10px}.actions{display:flex;gap:8px;justify-content:center;margin:18px auto}.actions button{border:0;border-radius:7px;padding:10px 16px;background:#20543d;color:white;font-weight:bold}
+ ${isA4?`.paper{width:100%;max-width:760px;padding:18px;border:1px solid #ddd}.head{text-align:left}.head h1{font-size:25px}.invoice-meta{font-size:12px}.customer{font-size:12px}.item{display:grid;grid-template-columns:1fr}.item-name{font-size:12px}.item-meta,.total-row{font-size:12px}.grand{font-size:17px}.items{margin-top:14px}`:''}
+ @media print{body{padding:0}.paper{border:0!important;margin:0 auto!important;padding:${isA4?'0':'0'}!important;width:${isA4?'100%':width}!important;max-width:${isA4?'100%':width}!important}.actions{display:none}@page{size:${isA4?'A4':pageWidth+' auto'};margin:${isA4?'12mm':'2mm'}}}
+ </style></head><body><main class="paper"><div class="head"><h1>${esc(shop.shopName||'ANAYAT ARTS')}</h1><div class="tag">GARMENTS • BILLING & INVENTORY</div><div class="shop-details">${esc(shop.address||'')}<br>${esc(shop.phone||'')}</div></div>
+ <div class="invoice-meta"><div><b>Invoice:</b> ${esc(sale.invoice)}<br><b>Date:</b> ${esc(date)}</div><div style="text-align:right"><b>${esc(sale.status||'')}</b><br>${esc(size)} PAPER</div></div>
+ <div class="customer"><b>Customer:</b> ${esc(sale.customer||'Walk-in customer')}<br><b>Phone:</b> ${esc(sale.phone||'-')}<br><b>Payment:</b> ${esc(sale.method||'')}</div>
+ <div class="items">${rows}</div><div class="totals">${totals}</div><div class="thanks">Thank you for shopping with ANAYAT ARTS!</div></main>
  <div class="actions"><button onclick="window.print()">Print / Save as PDF</button><button onclick="window.close()">Close</button></div>
  <script>window.onload=()=>setTimeout(()=>window.print(),350);<\/script></body></html>`);
  w.document.close();
 }
 function renderSales(){let q=$('salesSearch').value.toLowerCase();$('salesRows').innerHTML=db.sales.filter(s=>(s.invoice+' '+s.customer).toLowerCase().includes(q)).map(s=>`<tr><td><b>${esc(s.invoice)}</b></td><td>${esc(s.customer)}</td><td>${new Date(s.date).toLocaleDateString()}</td><td class="num">${money(s.total)}</td><td><span class="pill">${s.status}</span></td><td><button class="light" data-print="${s.id}" style="padding:6px 8px">Print</button> <button class="light" data-pay="${s.id}" style="padding:6px 8px">Receive</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">No sales recorded.</td></tr>';
-$('salesRows').querySelectorAll('[data-print]').forEach(b=>b.onclick=()=>{let sale=db.sales.find(x=>x.id===b.dataset.print);if(sale)printSale(sale)});
+$('salesRows').querySelectorAll('[data-print]').forEach(b=>b.onclick=()=>{let sale=db.sales.find(x=>x.id===b.dataset.print);if(sale)printSale(sale,$('printPaperSize').value)});
 $('salesRows').querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>{let s=db.sales.find(x=>x.id===b.dataset.pay),remaining=s.total-s.received;if(remaining<=0){toast('This invoice is already paid');return}let v=prompt('Remaining: '+money(remaining)+'\\nEnter payment received (PKR):');if(v===null)return;let amount=Number(v);if(!Number.isFinite(amount)||amount<=0){toast('Enter a valid amount');return}s.received=Math.min(s.total,s.received+amount);s.balance=s.total-s.received;s.status=s.balance<=0?'Paid':'Partial';persist();toast('Payment recorded')})}
 $('salesSearch').oninput=renderSales;
 function renderReports(){let sales=db.sales.reduce((a,s)=>a+s.total,0),profit=db.sales.reduce((a,s)=>a+s.items.reduce((z,x)=>z+(x.price-x.cost)*x.qty,0)-s.discount,0),due=db.sales.reduce((a,s)=>a+(s.total-s.received),0),stock=db.products.reduce((a,p)=>a+p.stock,0),low=db.products.filter(p=>p.stock<=Number(db.settings.lowLevel));$('rSales').textContent=money(sales);$('rProfit').textContent=money(profit);$('rDue').textContent=money(due);$('rStock').textContent=stock;$('rLow').textContent=low.length;$('rInvoices').textContent=db.sales.length;$('lowList').innerHTML=low.length?'<b>Low-stock products:</b> '+low.map(p=>esc(p.name)+' ('+p.stock+')').join(', '):'No low-stock products.'}
